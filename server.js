@@ -3,7 +3,7 @@
 
 var args = {
   channels: [
-    //{port: 22100, channel:'<<'},
+    {port: 22100, channel:'<<'},
     {port: 22101, channel:'>>'},
   ],
 };
