@@ -1,13 +1,8 @@
 
-var args = {
-  playback: {
-    file: 'raw.txt',
-    channels: [
-      {channel:'<<', addr: '127.0.0.1', port: 22100, trace:'tx'},
-      {channel:'>>', addr: '127.0.0.1', port: 22101, trace:'tx'},
-    ],
-  }
-};
+const app = process.argv[2];
+var config = require('./config')[app];
+config = config && config.terminal;
+if (!config) return;
 
 var net = require('net');
 var Logger = require('./logger');
@@ -17,9 +12,9 @@ var rootLogger = new Logger();
 var logger = rootLogger.sub('#');
 var log = logger.log;
 
-if (args.playback) {
-  var logFile = args.playback.file;
-  var terms = args.playback.channels.map(function(ch) {ch.file = logFile; return new Terminal(ch)});
+if (config.playback) {
+  var logFile = config.playback.file;
+  var terms = config.playback.channels.map(function(ch) {ch.file = logFile; return new Terminal(ch)});
   terms.forEach(function(t){t.start()});
 }
 

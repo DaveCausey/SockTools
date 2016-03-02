@@ -1,20 +1,21 @@
 
-var config = {
-  downlink:{port:22100, channel:'<<'},
-  //uplink:{addr:'107.20.164.239', port:8008, channel:'>>'}
-  uplink:{addr:'localhost', port:22101, channel:'>>'},
-  log:{port:22102}
-};
+const app = process.argv[2];
+var config = require('./config')[app];
+config = config && config.proxy;
+if (!config) return;
 
-var net = require('net');
-var Logger = require('./logger');
-var Parser = require('./parser');
-var emittify = require('./emittify');
-var rootLogger = new Logger(config.log);
-var logger = rootLogger.sub('#');
-var log = logger.log;
+const net = require('net');
+const util = require('util');
+const EventEmitter = require('events');
+const Logger = require('./logger');
+const Parser = require('./parser');
+const rootLogger = new Logger(config.log);
+const logger = rootLogger.sub('#');
+const log = logger.log;
 
-var relay = new Relay(config);
+if (config) {
+  var relay = new Relay(config);
+}
 
 function Relay(config) {
   var dl = config.downlink, ul = config.uplink;
@@ -37,13 +38,13 @@ function Relay(config) {
 }
 
 function Uplink(config) {
+  EventEmitter.call(this);
   var self = this;
   var upQueue = [];
   var _ready = false;
   var socket = net.connect(config.port, config.addr, onConnect);
 
   self.write = write;
-  emittify(self);
 
   function write(data) {
     if (upQueue) return upQueue.push(data);
@@ -59,4 +60,5 @@ function Uplink(config) {
     function rx(data) {self.emit('data',data)}
   }
 }
+util.inherits(Uplink,EventEmitter);
 

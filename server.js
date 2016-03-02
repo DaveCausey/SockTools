@@ -1,12 +1,8 @@
 
-// Server - TCP port server
-
-var args = {
-  channels: [
-    {port: 22100, channel:'<<'},
-    {port: 22101, channel:'>>'},
-  ],
-};
+const app = process.argv[2];
+var config = require('./config')[app];
+config = config && config.server;
+if (!config) return;
 
 var net = require('net');
 var Logger = require('./logger');
@@ -15,8 +11,8 @@ var rootLogger = new Logger();
 var logger = rootLogger.sub('#');
 var log = logger.log;
 
-if (args.channels) {
-  args.channels.forEach(function(ch) {
+if (config.channels) {
+  config.channels.forEach(function(ch) {
     listen(ch.port, ch.channel);
   });
 }

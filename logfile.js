@@ -1,6 +1,7 @@
 
-var emittify = require('./emittify');
-var fs = require('fs');
+const fs = require('fs');
+const util = require('util');
+const EventEmitter = require('events');
 
 module.exports = {
   Reader: LogReader,
@@ -37,10 +38,10 @@ function LogReader(log) {
 }
 
 function LogPlayer() {
+  EventEmitter.call(this);
   var self = this;
 
   this.play = play;
-  emittify(this);
 
   function play(recs, channel, cb) {
     recs = recs.filter(function(x){return x.channel === channel});
@@ -62,4 +63,5 @@ function LogPlayer() {
     }
   }
 }
+util.inherits(LogPlayer,EventEmitter);
 
