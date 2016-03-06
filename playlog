@@ -3,27 +3,29 @@
 //
 // CLI app to replay one or more channels from a log file on one or more TCP sockets
 //
-// Usage: <cmd> <file> <ch1> [<ch2> ...], where <ch*> is formatted as '<ch>:<host>:<port>'
-// Example: <cmd> data/raw.txt '<<:127.0.0.1:22100' '>>:127.0.0.1:22101'
+// Usage: <cmd> <file> <ch1> [<ch2> ...], where <ch*> is formatted as '<ch>[:<host>]:<port>'
+// Example: <cmd> data/raw.txt '<<:22100' '>>:22101'
 //
 
 const SocketPlayer = require('./socketplayer');
 
 var args = process.argv.slice(2);
 var file = args.shift() || 'data/raw.txt';
-var ports = args; if (!ports.length) ports = ['127.0.0.1:22100','127.0.0.1:22101'];
-
-const channelKeys = ['<<','>>'];
+var ports = args; if (!ports.length) ports = ['<<:22100','>>:22101'];
 
 var player = new SocketPlayer({
   file: file,
-  channels: ports.map(function(p,i) {
-    var m = p.split(':');
-    if (m.length === 2 && i < channelKeys.length) m.unshift(channelKeys[i]);
-    if (m.length !== 3) console.log('Invalid endpoint argument "%s"', p);
-    else return {channel:m[0],addr:m[1],port:m[2]};
-  }).filter(function(x){return !!x})
+  channels: ports.map(parseOutputPort).filter(function(x){return !!x})
 });
 
 player.start();
+
+function parseInputPort(p) {return parsePort(p,'')}
+function parseOutputPort(p) {return parsePort(p,'localhost')}
+function parsePort(p,defAddr) {
+  var m = p.split(':'); 
+  if (m.length === 2) m.splice(1,0,defAddr);
+  if (m.length === 3) return {channel:m[0], addr:m[1], port:m[2]};
+  console.log('Invalid endpoint argument "%s"', p);
+}
 

@@ -3,18 +3,14 @@
 //
 // CLI app to capture a log to stdout from one or more TCP sockets
 //
-// Usage: <cmd> <ch1> [<ch2> ...], where <ch*> is formatted as '<ch>:<port>'
+// Usage: <cmd> <ch1> [<ch2> ...], where <ch*> is formatted as '<ch>[:<interface>]:<port>'
 // Example: <cmd> '<<:22100' '>>:22101'
 //
 
 var args = process.argv.slice(2);
 var ports = args; if (!ports.length) ports = ['>>:22100','<<:22101'];
 var config = {
-  channels: ports.map(function(p,i) {
-    var m = p.split(':');
-    if (m.length !== 2) console.log('Invalid endpoint argument "%s"', p);
-    else return {channel:m[0],port:m[1]};
-  }).filter(function(x){return !!x})
+  channels: ports.map(parseInputPort).filter(function(x){return !!x})
 };
 
 var net = require('net');
@@ -25,21 +21,28 @@ var logger = rootLogger.sub('#');
 var log = logger.log;
 
 if (config.channels) {
-  config.channels.forEach(function(ch) {
-    listen(ch.port, ch.channel);
-  });
+  config.channels.forEach(listen);
 }
 
-function listen(port, channel) {
-  net.createServer(onConnect).listen(port);
+function listen(ch) {
+  net.createServer(onConnect).listen(ch.port, ch.addr);
 
   function onConnect(socket) {
-    var parser = new Parser(logger.sub(channel),rootLogger.sub(channel));
+    var parser = new Parser(logger.sub(ch.channel),rootLogger.sub(ch.channel));
     socket.on('data', onData).on('close', onClose);
     log('Connected');
 
     function onClose() {log('Disconnected')}
     function onData(data) {parser.rx(data)}
   }
+}
+
+function parseInputPort(p) {return parsePort(p,'')}
+function parseOutputPort(p) {return parsePort(p,'localhost')}
+function parsePort(p,defAddr) {
+  var m = p.split(':'); 
+  if (m.length === 2) m.splice(1,0,defAddr);
+  if (m.length === 3) return {channel:m[0], addr:m[1], port:m[2]};
+  console.log('Invalid endpoint argument "%s"', p);
 }
 

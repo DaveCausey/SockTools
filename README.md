@@ -11,13 +11,13 @@ Listen on one port for the uplink and another for the downlink
 
 Play back each channel of the log file to its own port  
 ```
-./playlog data/raw.txt '<<:127.0.0.1:22100' '>>:127.0.0.1:22101'  
+./playlog data/raw.txt '<<:22100' '>>:22101'  
 ```
 
 ### Send sample data through a logging proxy
 Start the logging proxy - listen on port 22100, forward to port 22101, and log to port 22102  
 ```
-./proxy '<<:22100' '>>:localhost:22101' 22102  
+./proxy '<<:22100' '>>:22101' 22102  
 ```
 
 Listen on the proxy forward port  
@@ -27,7 +27,7 @@ Listen on the proxy forward port
 
 Play back a log into the proxy listen port  
 ```
-./playlog data/raw.txt '<<:127.0.0.1:22100'  
+./playlog data/raw.txt '<<:22100'  
 ```
 
 Monitor the logging output of the proxy  

@@ -4,16 +4,16 @@
 // CLI app to forward a TCP port and capture log data
 //
 // Usage: <cmd> <in> <out> <log>, where
-//  <in> is the port to forward, formatted as '<ch>:<port>'
-//  <out> is the forward destination, formatted as '<ch>:<host>:<port>'
+//  <in> is the port to forward, formatted as '<ch>[:<iface>]:<port>'
+//  <out> is the forward destination, formatted as '<ch>[:<host>]:<port>'
 //  <log> is a port number on which to stream the log
 //
-// Example: <cmd> '<<:22100' '>>:localhost:22101' 22102
+// Example: <cmd> '<<:22100' '>>:22101' 22102
 //
 
 var args = process.argv.slice(2);
 var inport = args.shift() || '<<:22100';
-var outport = args.shift() || '>>:localhost:22101';
+var outport = args.shift() || '>>:22101';
 var logport = args.shift() || '22102';
 
 const net = require('net');
@@ -21,13 +21,10 @@ const util = require('util');
 const EventEmitter = require('events');
 const Logger = require('./logger');
 const Parser = require('./parser');
-var config = {downlink:parseInport(), uplink:parseOutport(), log:{port:logport}};
+var config = {downlink:parseInputPort(inport), uplink:parseOutputPort(outport), log:{port:logport}};
 const rootLogger = new Logger(config.log);
 const logger = rootLogger.sub('#');
 const log = logger.log;
-
-function parseInport() {var m = inport.split(':'); return m.length === 2 ? {channel:m[0], port:m[1]} : null}
-function parseOutport() {var m = outport.split(':'); return m.length === 3 ? {channel:m[0], addr:m[1], port:m[2]} : null}
 
 if (config && config.downlink && config.uplink) {
   var relay = new Relay(config);
@@ -77,4 +74,13 @@ function Uplink(config) {
   }
 }
 util.inherits(Uplink,EventEmitter);
+
+function parseInputPort(p) {return parsePort(p,'')}
+function parseOutputPort(p) {return parsePort(p,'localhost')}
+function parsePort(p,defAddr) {
+  var m = p.split(':'); 
+  if (m.length === 2) m.splice(1,0,defAddr);
+  if (m.length === 3) return {channel:m[0], addr:m[1], port:m[2]};
+  console.log('Invalid endpoint argument "%s"', p);
+}
 
