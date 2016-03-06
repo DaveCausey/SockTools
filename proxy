@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+
+//
+// CLI app to forward a TCP port and capture log data
+//
+// Usage: <cmd> <in> <out> <log>, where
+//  <in> is the port to forward, formatted as '<ch>:<port>'
+//  <out> is the forward destination, formatted as '<ch>:<host>:<port>'
+//  <log> is a port number on which to stream the log
+//
+// Example: <cmd> '<<:22100' '>>:localhost:22101' 22102
+//
+
+var args = process.argv.slice(2);
+var inport = args.shift() || '<<:22100';
+var outport = args.shift() || '>>:localhost:22101';
+var logport = args.shift() || '22102';
+
+const net = require('net');
+const util = require('util');
+const EventEmitter = require('events');
+const Logger = require('./logger');
+const Parser = require('./parser');
+var config = {downlink:parseInport(), uplink:parseOutport(), log:logport};
+const rootLogger = new Logger(config.log);
+const logger = rootLogger.sub('#');
+const log = logger.log;
+
+function parseInport() {var m = inport.split(':'); return m.length === 2 ? {channel:m[0], port:m[1]} : null}
+function parseOutport() {var m = outport.split(':'); return m.length === 3 ? {channel:m[0], addr:m[1], port:m[2]} : null}
+
+if (config && config.downlink && config.uplink) {
+  var relay = new Relay(config);
+}
+
+function Relay(config) {
+  var dl = config.downlink, ul = config.uplink;
+  net.createServer(openStream).listen(dl.port);
+
+  function openStream(socket) {
+    var uparser = new Parser(logger.sub(dl.channel), rootLogger.sub(dl.channel));
+    var dparser = new Parser(logger.sub(ul.channel), rootLogger.sub(ul.channel));
+    var uplink = new Uplink(ul);
+
+    log('Connected');
+    socket.on('data', dataup);
+    socket.on('close', closed);
+    uplink.on('data', datadown);
+
+    function closed() {log('Disconnected')}
+    function dataup(data) {uplink.write(data); uparser.rx(data)}
+    function datadown(data) {try { socket.write(data); } catch (e) {}; dparser.rx(data)}
+  }
+}
+
+function Uplink(config) {
+  EventEmitter.call(this);
+  var self = this;
+  var upQueue = [];
+  var _ready = false;
+  var socket = net.connect(config.port, config.addr, onConnect);
+
+  self.write = write;
+
+  function write(data) {
+    if (upQueue) return upQueue.push(data);
+    socket.write(data);
+  }
+
+  function onConnect() {
+    socket.on('data', rx);
+    socket.on('close', closed);
+    upQueue.forEach(function(b){socket.write(b)}); upQueue = null;
+
+    function closed() {log('Uplink disconnected')}
+    function rx(data) {self.emit('data',data)}
+  }
+}
+util.inherits(Uplink,EventEmitter);
+
