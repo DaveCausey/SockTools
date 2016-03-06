@@ -2,5 +2,5 @@
 Tools for analyzing binary TCP stream data using Node.js
 
 ## Dependencies
-Node.js
+Node.js 4.2.6+
 

@@ -1,6 +1,6 @@
 
-var ilc = require('./ilc');
-var EndPoint = ilc.EndPoint;
+var deps = require('./deps');
+var EndPoint = deps.ilc.EndPoint;
 var FrameParser = require('./pack').Reader;
 
 module.exports = Framer;

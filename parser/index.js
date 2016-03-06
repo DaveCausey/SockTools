@@ -1,5 +1,6 @@
 
-var ilc = require('./ilc');
+var deps = require('./deps');
+var ilc = deps.ilc;
 var Framer = require('./framer');
 var Mux = require('./mux');
 var Arq = require('./arq');
